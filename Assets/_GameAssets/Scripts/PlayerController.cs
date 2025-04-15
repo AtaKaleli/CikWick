@@ -11,6 +11,7 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private Transform orientationTransform;
 
     [Header("Movement Settings")]
+    [SerializeField] private KeyCode movementKey;
     [SerializeField] private float movementSpeed;
 
     [Header("Jump Settings")]
@@ -22,6 +23,14 @@ public class PlayerController : MonoBehaviour
     [Header("Ground Check Settings")]
     [SerializeField] private float playerHeight;
     [SerializeField] private LayerMask groundLayer;
+    [SerializeField] private float groundDrag;
+
+    [Header("Slider Settings")]
+    [SerializeField] private KeyCode slideKey;
+    [SerializeField] private float slideMultiplier;
+    [SerializeField] private float slideDrag;
+    private bool isSliding;
+
 
 
     private void Awake()
@@ -38,6 +47,8 @@ public class PlayerController : MonoBehaviour
     private void Update()
     {
         SetInput();
+        SetPlayerDrag();
+        LimitPlayerSpeed();
     }
 
     private void FixedUpdate()
@@ -53,7 +64,17 @@ public class PlayerController : MonoBehaviour
         horizontalInput = Input.GetAxisRaw("Horizontal");
         verticalInput = Input.GetAxisRaw("Vertical");
 
-        if (Input.GetKeyDown(jumpKey) && canJump && IsGrounded())
+        if (Input.GetKeyDown(slideKey))
+        {
+            isSliding = true;
+
+        }
+        else if (Input.GetKeyDown(movementKey))
+        {
+            isSliding = false;
+        }
+
+        else if (Input.GetKeyDown(jumpKey) && canJump && IsGrounded())
         {
             canJump = false;
             SetPlayerJump();
@@ -65,7 +86,38 @@ public class PlayerController : MonoBehaviour
     {
         movementDirection = orientationTransform.forward * verticalInput + orientationTransform.right * horizontalInput;
 
-        playerRigidbody.AddForce(movementDirection.normalized * movementSpeed, ForceMode.Force);
+        if (isSliding)
+        {
+            playerRigidbody.AddForce(movementDirection.normalized * movementSpeed * slideMultiplier, ForceMode.Force);
+        }
+        else
+        {
+            playerRigidbody.AddForce(movementDirection.normalized * movementSpeed , ForceMode.Force);
+        }
+    }
+
+    private void SetPlayerDrag()
+    {
+        if (isSliding)
+        {
+            playerRigidbody.linearDamping = slideDrag;
+        }
+        else
+        {
+            playerRigidbody.linearDamping = groundDrag;
+
+        }
+    }
+
+    private void LimitPlayerSpeed()
+    {
+        Vector3 flatVelocity = new Vector3(playerRigidbody.linearVelocity.x, 0f, playerRigidbody.linearVelocity.z);
+
+        if(flatVelocity.magnitude > movementSpeed)
+        {
+            Vector3 limitedVelocity = flatVelocity.normalized * movementSpeed;
+            playerRigidbody.linearVelocity = limitedVelocity;
+        }
     }
 
     private void SetPlayerJump()
